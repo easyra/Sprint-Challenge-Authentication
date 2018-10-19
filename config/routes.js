@@ -1,6 +1,11 @@
 const axios = require('axios');
-
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken');
+const jwtKey = require('../_secrets/keys').jwtKey;
 const { authenticate } = require('./middlewares');
+
+const dbConfig = require('../database/dbConfig')
+
 
 module.exports = server => {
   server.post('/api/register', register);
@@ -9,11 +14,29 @@ module.exports = server => {
 };
 
 function register(req, res) {
-  // implement user registration
+  const creds = req.body
+  creds.password = bcrypt.hashSync(creds.password, 10) 
+  dbConfig('users').insert(creds).then(() => {
+    const token = generateToken(creds)
+    res.json({welcome: creds.username, token: token})
+  }
+    
+  )
+
+
 }
 
 function login(req, res) {
   // implement user login
+  const creds = req.body
+  dbConfig('users').where({username: creds.username}).first().then(user => {
+    if(user && bcrypt.compareSync(creds.password, user.password)){
+      const token = generateToken(creds)
+      res.json({welcome:creds.username, token: token})
+    }
+  }
+
+  )
 }
 
 function getJokes(req, res) {
@@ -27,4 +50,15 @@ function getJokes(req, res) {
     .catch(err => {
       res.status(500).json({ message: 'Error Fetching Jokes', error: err });
     });
+}
+
+function generateToken(user) {
+  const jwtPayload = {
+    sub: user.username
+  };
+  const jwtOptions = {
+    expiresIn: "1h"
+  };
+
+  return jwt.sign(jwtPayload, jwtKey, jwtOptions);
 }
