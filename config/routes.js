@@ -21,7 +21,9 @@ function register(req, res) {
     res.json({welcome: creds.username, token: token})
   }
     
-  )
+  ).catch(err => {
+    res.status(500).json(err)
+  })
 
 
 }
@@ -33,10 +35,14 @@ function login(req, res) {
     if(user && bcrypt.compareSync(creds.password, user.password)){
       const token = generateToken(creds)
       res.json({welcome:creds.username, token: token})
+    }else {
+      res.status(401).json({ message: "nope" });
     }
   }
 
-  )
+  ).catch(err => {
+    res.status(500).json(err)
+  })
 }
 
 function getJokes(req, res) {
